@@ -1,0 +1,37 @@
+# Variáveis de ambiente e segredos
+.env
+.env.local
+.env.*.local
+
+# Banco de dados SQLite e arquivos temporários
+chatbot.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Cache Python e ambientes virtuais
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+my_env/
+venv/
+ENV/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Pastas de dados de execução e uploads
+outputs/
+uploads/
+*.txt
+!requirements.txt
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

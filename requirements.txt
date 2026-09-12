@@ -1,0 +1,22 @@
+# Core
+python-dotenv>=1.0.1
+requests>=2.31.0
+
+# Streamlit
+streamlit>=1.40.0
+
+# LangChain / LangGraph
+langchain>=0.3.0
+langchain-core>=0.3.0
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite>=2.0.0
+
+# Provedores
+langchain-openai>=0.2.0
+langchain-google-genai>=2.0.0
+
+# Ferramentas
+tavily-python>=0.5.0
+
+# PDF
+pypdf>=5.0.0
