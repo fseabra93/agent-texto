@@ -40,7 +40,7 @@ with st.sidebar:
     st.markdown(f"- Tavily: {'✅ Configurada' if tavily_ok else '⚠️ Ausente (busca externa desativada)'}")
 
     st.markdown("---")
-    st.markdown("**Fluxo:** LLM1 → LLM2 (Tavily) → LLM3-7 (Workers) → LLM8 (Sintetizador) → LLM9 (Revisão)")
+    st.markdown("**Fluxo:** LLM1 → LLM2 (Tavily com fontes) → LLM3-7 (Workers com fontes) → LLM8 (Sintetizador) → LLM9 (Revisão)")
 
     if st.button("🗑️ Limpar resultado e sessão"):
         for key in list(st.session_state.keys()):
@@ -99,12 +99,12 @@ if run:
                    "fact_check", "proofread", "save_file"]
     node_labels = {
         "reader":       "LLM1 — Lendo e identificando o tema central",
-        "orchestrator": "LLM2 — Buscando notícias relacionadas (Tavily)",
-        "workers":      "LLM3-7 — Extraindo informações em paralelo",
-        "synthesizer":  "LLM8 — Sintetizando artigo jornalístico sóbrio",
+        "orchestrator": "LLM2 — Mapeando 5 notícias com suas respectivas fontes (Tavily)",
+        "workers":      "LLM3-7 — Agentes extraindo informações e fontes em paralelo",
+        "synthesizer":  "LLM8 — Sintetizando artigo jornalístico sóbrio a partir das fontes",
         "fact_check":   "LLM9a — Checagem de consistência factual",
         "proofread":    "LLM9b — Revisão ortográfica e gramatical",
-        "save_file":    "💾 Salvando arquivo .txt",
+        "save_file":    "💾 Salvando texto_final_blog.txt e textos_fonte.txt",
     }
 
     final_state = {}
@@ -134,15 +134,17 @@ if run:
                     progress.progress(min((i + 1) / len(nodes_order), 1.0))
                     status_box.info(f"Executando: {label}")
 
-        status_box.success("✅ Matéria jornalística gerada e revisada com sucesso!")
+        status_box.success("✅ Matéria jornalística gerada e fontes compiladas com sucesso!")
 
         # Salva na sessão para persistir após cliques em download ou reloads
         st.session_state["resultado_blog"] = {
             "final_text": final_state.get("final_text", ""),
+            "raw_sources_text": final_state.get("raw_sources_text", ""),
             "theme": final_state.get("theme", ""),
             "messages": [m.content for m in final_state.get("messages", [])],
             "logs": logs_recorded,
-            "output_path": final_state.get("output_path", "")
+            "output_path": final_state.get("output_path", ""),
+            "sources_output_path": final_state.get("sources_output_path", "")
         }
 
     except Exception as e:
@@ -155,6 +157,7 @@ if run:
 if "resultado_blog" in st.session_state:
     res = st.session_state["resultado_blog"]
     final_text = res.get("final_text", "")
+    raw_sources_text = res.get("raw_sources_text", "")
 
     st.markdown("---")
     st.subheader("3. Texto final")
@@ -175,17 +178,36 @@ if "resultado_blog" in st.session_state:
                 time.sleep(0.01)
         placeholder.markdown(final_text)
 
-    # Download seguro que não perde o estado da página
-    st.download_button(
-        label="⬇️ Baixar texto final (.txt)",
-        data=final_text.encode("utf-8"),
-        file_name="texto_final_blog.txt",
-        mime="text/plain",
-        key="btn_download_texto"
-    )
+    # Botões de Download Lado a Lado
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button(
+            label="⬇️ Baixar matéria final (texto_final_blog.txt)",
+            data=final_text.encode("utf-8"),
+            file_name="texto_final_blog.txt",
+            mime="text/plain",
+            key="btn_download_texto"
+        )
+    with col2:
+        st.download_button(
+            label="📥 Baixar fontes brutas (textos_fonte.txt)",
+            data=raw_sources_text.encode("utf-8"),
+            file_name="textos_fonte.txt",
+            mime="text/plain",
+            key="btn_download_fontes"
+        )
 
-    if res.get("output_path"):
-        st.caption(f"Arquivo também salvo localmente em: `{res['output_path']}`")
+    if res.get("output_path") or res.get("sources_output_path"):
+        st.caption(f"Arquivos salvos localmente: `{res.get('output_path')}` e `{res.get('sources_output_path')}`")
+
+    # Visualização dos textos crus com as fontes
+    with st.expander("📚 Ver compilação dos textos crus e fontes (LLM 3 a LLM 7)"):
+        st.text_area(
+            "Conteúdo reunido com fontes (textos_fonte.txt)",
+            value=raw_sources_text,
+            height=350,
+            disabled=True
+        )
 
     # Histórico de mensagens do grafo
     with st.expander("📋 Histórico completo das mensagens do fluxo"):

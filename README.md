@@ -26,18 +26,19 @@ flowchart TD
     D5 --> E
     E --> F["LLM 9a: Fact-Checker (Checagem de consistência e fatos)"]
     F --> G["LLM 9b: Revisor Gramatical (PT-BR Novo Acordo)"]
-    G --> H["💾 Save File (outputs/texto_final_blog.txt)"]
-    H --> I["🖥️ Interface Streamlit (Visualização e Download)"]
+    G --> H["💾 Save Files (texto_final_blog.txt e textos_fonte.txt)"]
+    H --> I["🖥️ Interface Streamlit (Visualização e Download duplo)"]
 ```
 
 ### Detalhamento dos Nós:
 1. **LLM 1 (Reader)**: Lê o conteúdo de entrada (faz raspagem da URL com limpeza de HTML, lê o PDF via PyPDF ou recebe o texto), gerando um tema conciso para pesquisa e um resumo preliminar.
-2. **LLM 2 (Orchestrator)**: Utiliza o tema apurado para buscar até 5 notícias recentes e contextualmente relacionadas no **Tavily**.
-3. **LLM 3 a 7 (Workers Paralelos)**: Processam as notícias coletadas simultaneamente usando `ThreadPoolExecutor`, extraindo dados factuais, datas, declarações e estatísticas relevantes.
-4. **LLM 8 (Synthesizer)**: Unifica o material original com as fontes secundárias, redigindo um artigo jornalístico sóbrio (~400 a 600 palavras) com título, lead, corpo informativo e fechamento.
-5. **LLM 9a (Fact-Checker)**: Audita a consistência lógica, científica e a neutralidade da matéria redigida.
-6. **LLM 9b (Revisor Gramatical)**: Aplica revisão ortográfica, de concordância, regência e pontuação conforme o Novo Acordo Ortográfico da Língua Portuguesa.
-7. **Persistência e Saída**: O artigo final é gravado em disco (`outputs/texto_final_blog.txt`) e exibido na tela com opção de download imediato.
+2. **LLM 2 (Orchestrator)**: Utiliza o tema apurado para buscar até 5 notícias recentes no **Tavily**, mapeando cada notícia com sua respectiva fonte (URL e veículo de publicação).
+3. **LLM 3 a 7 (Workers Paralelos)**: Cinco agentes executam em paralelo via `ThreadPoolExecutor`. Cada um recebe a notícia correspondente acompanhada de sua respectiva fonte e extrai dados factuais, números, datas e declarações.
+4. **Compilação de Fontes Brutas (`textos_fonte.txt`)**: Função `compile_raw_sources_text` unifica as extrações brutas dos agentes LLM 3 a LLM 7 mantendo a rastreabilidade completa das fontes para download.
+5. **LLM 8 (Synthesizer)**: Unifica o material original com as fontes secundárias, redigindo um artigo jornalístico sóbrio (~400 a 600 palavras) com título, resumo, lead, corpo informativo e fechamento.
+6. **LLM 9a (Fact-Checker)**: Audita a consistência lógica, científica e a neutralidade da matéria redigida.
+7. **LLM 9b (Revisor Gramatical)**: Aplica revisão ortográfica, de concordância, regência e pontuação conforme o Novo Acordo Ortográfico da Língua Portuguesa.
+8. **Persistência e Saída**: Gravação de `outputs/texto_final_blog.txt` e `outputs/textos_fonte.txt`, ambos disponibilizados com botões de download independentes na interface Streamlit.
 
 ---
 
