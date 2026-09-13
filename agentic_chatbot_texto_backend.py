@@ -354,7 +354,6 @@ def node_workers_parallel(state: BlogState) -> dict:
     provider = state.get("provider", "openai")
     model = state.get("model") or ("gpt-4o-mini" if provider == "openai" else "gemini-2.5-flash")
 
-    # Garante execução dos 5 agentes: LLM 3, LLM 4, LLM 5, LLM 6, LLM 7 (IDs 3, 4, 5, 6, 7)
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = [
             executor.submit(_worker_extract, news[i], i + 3, provider, model)
@@ -362,10 +361,30 @@ def node_workers_parallel(state: BlogState) -> dict:
         ]
         extracted = [f.result() for f in futures]
 
+    # Compila imediatamente as fontes brutas e já grava no disco
+    raw_sources = compile_raw_sources_text(
+        extracted_articles=extracted,
+        source_type=state.get("source_type", ""),
+        source_value=state.get("source_value", ""),
+        theme=state.get("theme", "")
+    )
+
+    out_dir = "outputs"
+    os.makedirs(out_dir, exist_ok=True)
+    sources_path = os.path.join(out_dir, "textos_fonte.txt")
+    try:
+        with open(sources_path, "w", encoding="utf-8") as f:
+            f.write(raw_sources)
+    except Exception:
+        pass
+
     return {
-        "messages": [AIMessage(content=f"[LLM3-7/Workers] Extração concluída pelos 5 agentes (LLM 3, LLM 4, LLM 5, LLM 6 e LLM 7) com suas fontes.")],
+        "messages": [AIMessage(content="[LLM3-7/Workers] Extração concluída pelos 5 agentes (LLM 3 a LLM 7) com suas fontes.")],
         "extracted_articles": extracted,
+        "raw_sources_text": raw_sources,
+        "sources_output_path": sources_path,
     }
+
 
 
 def node_synthesizer(state: BlogState) -> dict:

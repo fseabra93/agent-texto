@@ -136,15 +136,33 @@ if run:
 
         status_box.success("✅ Matéria jornalística gerada e fontes compiladas com sucesso!")
 
+        raw_sources = (final_state.get("raw_sources_text") or "").strip()
+        final_text_out = (final_state.get("final_text") or "").strip()
+
+        # Fallback de leitura do disco caso o estado em memória venha vazio
+        if not raw_sources and os.path.exists(os.path.join("outputs", "textos_fonte.txt")):
+            try:
+                with open(os.path.join("outputs", "textos_fonte.txt"), "r", encoding="utf-8") as f:
+                    raw_sources = f.read().strip()
+            except Exception:
+                pass
+
+        if not final_text_out and os.path.exists(os.path.join("outputs", "texto_final_blog.txt")):
+            try:
+                with open(os.path.join("outputs", "texto_final_blog.txt"), "r", encoding="utf-8") as f:
+                    final_text_out = f.read().strip()
+            except Exception:
+                pass
+
         # Salva na sessão para persistir após cliques em download ou reloads
         st.session_state["resultado_blog"] = {
-            "final_text": final_state.get("final_text", ""),
-            "raw_sources_text": final_state.get("raw_sources_text", ""),
+            "final_text": final_text_out,
+            "raw_sources_text": raw_sources,
             "theme": final_state.get("theme", ""),
             "messages": [m.content for m in final_state.get("messages", [])],
             "logs": logs_recorded,
-            "output_path": final_state.get("output_path", ""),
-            "sources_output_path": final_state.get("sources_output_path", "")
+            "output_path": final_state.get("output_path", os.path.join("outputs", "texto_final_blog.txt")),
+            "sources_output_path": final_state.get("sources_output_path", os.path.join("outputs", "textos_fonte.txt"))
         }
 
     except Exception as e:
@@ -156,8 +174,45 @@ if run:
 # -------------------- Exibição do Resultado Persistido --------------------
 if "resultado_blog" in st.session_state:
     res = st.session_state["resultado_blog"]
-    final_text = res.get("final_text", "")
-    raw_sources_text = res.get("raw_sources_text", "")
+    final_text = (res.get("final_text") or "").strip()
+    raw_sources_text = (res.get("raw_sources_text") or "").strip()
+
+    # Fallback automático: se a sessão existente tiver raw_sources_text vazio, recupera do disco
+    if not raw_sources_text:
+        candidates_sources = [
+            res.get("sources_output_path"),
+            os.path.join("outputs", "textos_fonte.txt")
+        ]
+        for p in candidates_sources:
+            if p and os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        disk_content = f.read().strip()
+                    if disk_content:
+                        raw_sources_text = disk_content
+                        res["raw_sources_text"] = disk_content
+                        st.session_state["resultado_blog"]["raw_sources_text"] = disk_content
+                        break
+                except Exception:
+                    pass
+
+    if not final_text:
+        candidates_final = [
+            res.get("output_path"),
+            os.path.join("outputs", "texto_final_blog.txt")
+        ]
+        for pf in candidates_final:
+            if pf and os.path.exists(pf):
+                try:
+                    with open(pf, "r", encoding="utf-8") as f:
+                        disk_final = f.read().strip()
+                    if disk_final:
+                        final_text = disk_final
+                        res["final_text"] = disk_final
+                        st.session_state["resultado_blog"]["final_text"] = disk_final
+                        break
+                except Exception:
+                    pass
 
     st.markdown("---")
     st.subheader("3. Texto final")
@@ -186,7 +241,8 @@ if "resultado_blog" in st.session_state:
             data=final_text.encode("utf-8"),
             file_name="texto_final_blog.txt",
             mime="text/plain",
-            key="btn_download_texto"
+            key="btn_download_texto",
+            disabled=(len(final_text) == 0)
         )
     with col2:
         st.download_button(
@@ -194,8 +250,12 @@ if "resultado_blog" in st.session_state:
             data=raw_sources_text.encode("utf-8"),
             file_name="textos_fonte.txt",
             mime="text/plain",
-            key="btn_download_fontes"
+            key="btn_download_fontes",
+            disabled=(len(raw_sources_text) == 0)
         )
+
+    if not raw_sources_text:
+        st.warning("⚠️ O conteúdo das fontes brutas ainda não foi carregado nesta sessão. Clique no botão de geração para rodar a apuração.")
 
     if res.get("output_path") or res.get("sources_output_path"):
         st.caption(f"Arquivos salvos localmente: `{res.get('output_path')}` e `{res.get('sources_output_path')}`")
@@ -204,7 +264,7 @@ if "resultado_blog" in st.session_state:
     with st.expander("📚 Ver compilação dos textos crus e fontes (LLM 3 a LLM 7)"):
         st.text_area(
             "Conteúdo reunido com fontes (textos_fonte.txt)",
-            value=raw_sources_text,
+            value=raw_sources_text if raw_sources_text else "(Nenhum conteúdo de fontes disponível no momento)",
             height=350,
             disabled=True
         )
